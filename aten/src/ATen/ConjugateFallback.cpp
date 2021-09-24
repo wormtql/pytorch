@@ -24,6 +24,11 @@ void conjugateFallback(const c10::OperatorHandle& op, DispatchKeySet dispatch_ke
   object.fallback_impl(op, dispatch_keys, stack);
 }
 
+void conjugateFallbackToHandleOnlyMutableInputs(const c10::OperatorHandle& op, DispatchKeySet dispatch_keys, torch::jit::Stack* stack) {
+  ConjFallback object;
+  object.linalg_fallback(op, dispatch_keys, stack);
+}
+
 TORCH_LIBRARY_IMPL(_, Conjugate, m) {
   m.fallback(torch::CppFunction::makeFromBoxedFunction<&conjugateFallback>());
 }
@@ -46,6 +51,8 @@ TORCH_LIBRARY_IMPL(aten, Conjugate, m) {
   m.impl("dot.out", torch::CppFunction::makeFallthrough());
   m.impl("vdot.out", torch::CppFunction::makeFallthrough());
   m.impl("mm", torch::CppFunction::makeFallthrough());
+  m.impl("linalg_solve_triangular", torch::CppFunction::makeFallthrough());
+  m.impl("linalg_solve_triangular.out", torch::CppFunction::makeFromBoxedFunction<&conjugateFallbackToHandleOnlyMutableInputs>());
   m.impl("mm.out", torch::CppFunction::makeFallthrough());
   m.impl("addmm", torch::CppFunction::makeFallthrough());
   m.impl("addmm_", torch::CppFunction::makeFallthrough());
