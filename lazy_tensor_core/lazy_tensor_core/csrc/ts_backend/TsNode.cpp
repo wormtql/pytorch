@@ -35,31 +35,58 @@ void TsNodeSetShapeDeferred(
   }
 }
 
+lazy_tensors::hash_t OperandHashes(const OpList& operands,
+                                   const lazy_tensors::hash_t& seed) {
+  lazy_tensors::hash_t hash = seed;
+  for (auto& operand : operands) {
+    if(operand){
+      hash = lazy_tensors::util::HashCombine(hash, operand.hash());
+    } else {
+      hash = lazy_tensors::util::HashCombine(hash, lazy_tensors::util::kNullOpt);
+    }
+  }
+  return hash;
+}
+
 TsNode::TsNode(OpKind op, OpList operands, lazy_tensors::Shape shape,
                size_t num_outputs, lazy_tensors::hash_t hash_seed)
-    : Node(op, operands, shape, num_outputs, hash_seed), shape_(shape) {}
+    : Node(
+          op, operands, {},
+          {},  // TODO(whc) BUG here, need to fill in at_ fields
+          num_outputs,
+          // TODO(WHC) this is inefficient (having to compute node_hash twice
+          // since I can't call hash() yet) so probably move dag_hash
+          // initialization to a separate function?
+          /* node_hash */ lazy_tensors::util::HashCombine(op.hash(), hash_seed),
+          /* dag_hash */
+          OperandHashes(operands,
+                        lazy_tensors::util::HashCombine(op.hash(), hash_seed))),
+      shape_(shape) {}
 
 TsNode::TsNode(OpKind op, OpList operands,
                const std::function<lazy_tensors::Shape()>& shape_fn,
                size_t num_outputs, lazy_tensors::hash_t hash_seed)
-    : Node(op, operands, shape_fn, num_outputs, hash_seed),
-      shape_(lazy_tensors::Shape()) {
+    : TsNode(op, operands, lazy_tensors::Shape(), num_outputs, hash_seed) {
   shape_ = GetOpShape(shape_fn);
 }
 
 TsNode::TsNode(OpKind op, OpList operands, size_t num_outputs,
                lazy_tensors::hash_t hash_seed)
-    : Node(op, operands, num_outputs, hash_seed),
-      shape_(lazy_tensors::Shape()) {}
+    : TsNode(op, operands,
+             // TODO(whc) use of legacy non-codegen IR classes breaks Node::at_*
+             // fields
+             lazy_tensors::Shape(), num_outputs, hash_seed) {}
 
 void TsNode::SetShapeDeferred(
     const std::function<lazy_tensors::Shape()>& shape_fn) {
   shape_ = GetOpShape(shape_fn);
 }
 
-TsNode::TsNode(OpKind op, lazy_tensors::Shape shape, size_t num_outputs,
-               lazy_tensors::hash_t hash_seed)
-    : Node(op, shape, num_outputs, hash_seed), shape_(shape) {}
+TsNode::TsNode(OpKind op, lazy_tensors::Shape shape,
+               size_t num_outputs, lazy_tensors::hash_t hash_seed)
+    : Node(op, {}, {}, num_outputs,
+           GetOpHash(op, shape, hash_seed)),
+      shape_(shape) {}
 
 const lazy_tensors::Shape& TsNode::shape() const { return shape_; }
 
@@ -104,6 +131,19 @@ std::string TsNode::ToString() const {
   }
   EmitShortFrameInfo(ss, metadata().frame_info);
   return ss.str();
+}
+
+lazy_tensors::hash_t TsNode::GetOpHash(OpKind op,
+                                       const lazy_tensors::Shape& shape,
+                                       lazy_tensors::hash_t hash_seed) {
+  if (lazy_tensors::Shape::IsDynamicMode()) {
+    lazy_tensors::hash_t h = lazy_tensors::util::HashCombine(
+        op.hash(), lazy_tensors::util::Hash(shape.rank()));
+    return lazy_tensors::util::HashCombine(h, hash_seed);
+  }
+  lazy_tensors::hash_t h = lazy_tensors::util::HashCombine(
+      op.hash(), lazy_tensors::util::Hash(shape.ToString()));
+  return lazy_tensors::util::HashCombine(h, hash_seed);
 }
 
 }  // namespace ir
