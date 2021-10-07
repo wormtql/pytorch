@@ -40,6 +40,51 @@ std::unordered_map<std::string, worker_id_t> collectNames(
   return nameToId;
 }
 
+const string storeKeyBarrierId = "_ID_";
+const string storeKeyProcessCount = "PROCESS_COUNT";
+const string storeKeyActiveCallCount = "ACTIVE_CALLS";
+const string storeKeyReady = "READY";
+static std::atomic<int> barrierId(0);
+
+std::tuple<std::string, std::string, std::string> getNextKeyIds() {
+  barrierId++;
+  std::string processCountKey =
+      storeKeyProcessCount + storeKeyBarrierId + std::to_string(barrierId);
+  std::string activeCallCountKey =
+      storeKeyActiveCallCount + storeKeyBarrierId + std::to_string(barrierId);
+  std::string barrierKey =
+      storeKeyReady + storeKeyBarrierId + std::to_string(barrierId);
+  return std::make_tuple(processCountKey, activeCallCountKey, barrierKey);
+}
+
+// Synchronize process with all other agent processes strictly using store
+// Block until all ``RpcAgent``s reach this method.
+// Returns true if there are 0 active calls amongst all rpc agents
+// Returns false otherwise
+bool syncCallCount(
+    ::c10d::PrefixStore store,
+    const int worldSize,
+    int activeCalls) {
+  std::string processCountKey, activeCallCountKey, readyKey;
+  std::tie(processCountKey, activeCallCountKey, readyKey) = getNextKeyIds();
+
+  // Add to keys which will record the number of processes and active calls
+  int totalProcessCount = store.add(processCountKey, 1);
+  int totalCallCount = store.add(activeCallCountKey, activeCalls);
+
+  // The last worker will need to set the ready key
+  if (totalProcessCount == worldSize) {
+    store.set(readyKey, std::vector<uint8_t>());
+  }
+
+  // Wait on the ready key to be set
+  store.wait(std::vector<std::string>{readyKey});
+  if (totalCallCount == 0) {
+    return true;
+  }
+  return false;
+}
+
 } // namespace rpc
 } // namespace distributed
 } // namespace torch
