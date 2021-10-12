@@ -449,6 +449,42 @@ Note that you can use ``torch.profiler`` (recommended, only available after 1.8.
 
 Please refer to the `profiler documentation <https://pytorch.org/docs/master/profiler.html>`__ for a full overview of profiler features.
 
+Lazy Model Materialization
+--------------------------
+
+.. warning::
+    This is an experimental feature and is subject to change. If you experience
+    any issues, let us know by opening a GitHub issue.
+
+.. autofunction:: torch.distributed.nn.utils.init_meta
+.. autofunction:: torch.distributed.nn.utils.is_meta_init
+
+``init_meta()`` vs. ``MyModule(device="meta")``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+If you are a model author, an alternative to ``init_meta()`` is to have a
+``device`` parameter as part of your constructor that will be used to initialize
+the model state (i.e. parameters, buffers, and other auxiliary tensors). The
+tradeoff is that this approach is intrusive and requires all (sub)modules of the
+model to accept a ``device`` parameter. Moreover for existing large models
+introducing a new constructor parameter can be prohibitively expensive.
+
+``init_meta`` on the other hand does not require any code changes, but can
+potentially fail to construct the model if the model initializes its state in an
+unconventional way that conflicts with the meta device.
+
+``init_meta()`` vs. ``skip_init()``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Although they sound similar ``init_meta()`` and ``skip_init()`` serve different
+purposes. ``init_meta()`` is meant for lazy model materialization and targets
+model users, while ``skip_init()`` is meant for optimized module initialization
+and targets model authors.
+
+Technically ``init_meta()`` returns a module where all its parameters and
+buffers reside on the meta device, while ``skip_init()`` returns a module where
+some or all its parameters or buffers are empty tensors allocated on a real
+device.
+
 Autograd-enabled communication primitives
 -----------------------------------------
 
