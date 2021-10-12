@@ -26,7 +26,7 @@ from torch.distributed._sharding_spec._internals import (
     get_chunked_dim_size,
 )
 from torch.types import Number
-from .ops import sharded_linear
+from .ops import (sharded_linear, uniform_)
 
 # Tracking for sharded tensor objects.
 _sharded_tensor_lock = threading.Lock()
@@ -635,7 +635,8 @@ class ShardedTensor(object):
     def __torch_function__(self, func, types, args=(), kwargs=None):
         if func == torch.nn.functional.linear:
             return sharded_linear(types, args, kwargs, self._process_group)
-
+        elif func == torch.nn.init.uniform_:
+            return uniform_(types, args, kwargs)
         raise RuntimeError(
             f"torch function '{func.__name__}', with args: {args} and "
             f"kwargs: {kwargs} not supported for ShardedTensor!")
