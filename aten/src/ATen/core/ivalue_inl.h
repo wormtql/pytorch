@@ -579,7 +579,7 @@ struct TORCH_API Tuple : c10::intrusive_ptr_target {
   // MSVC apparently can't disambiguate the other two overloads of
   // create when passed an initializer_list without this.
   static c10::intrusive_ptr<Tuple> create(std::initializer_list<IValue> elements_) {
-    return create(std::vector<IValue>(elements_));
+    return create(c10::ArrayRef<IValue>(elements_));
   }
 
   static c10::intrusive_ptr<Tuple> create(std::vector<IValue> elements_) {
@@ -588,6 +588,19 @@ struct TORCH_API Tuple : c10::intrusive_ptr_target {
 
   static c10::intrusive_ptr<Tuple> create(TupleElements elements_) {
     return c10::make_intrusive<Tuple>(std::move(elements_));
+  }
+
+  static c10::intrusive_ptr<Tuple> create(c10::ArrayRef<IValue> elements_) {
+    switch (elements_.size()) {
+      case 1:
+        return create(elements_[0]);
+      case 2:
+        return create(elements_[0], elements_[1]);
+      case 3:
+        return create(elements_[0], elements_[1], elements_[2]);
+      default:
+        return create(elements_.vec());
+    }
   }
 
   static c10::intrusive_ptr<Tuple> create(IValue e1) {
@@ -604,8 +617,8 @@ struct TORCH_API Tuple : c10::intrusive_ptr_target {
 
   template <typename... Args>
   static c10::intrusive_ptr<Tuple> create(Args&&... elements_) {
-    return c10::make_intrusive<Tuple>(
-        std::vector<IValue>{IValue(std::forward<Args>(elements_))...});
+    return create(
+        {IValue(std::forward<Args>(elements_))...});
   }
 
   // Again, it would be nice to make this noncopyable, but there's a
