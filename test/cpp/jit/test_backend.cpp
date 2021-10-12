@@ -110,7 +110,7 @@ TEST(BackendTest, ToBackendNotAvailable) {
   // Validate exception is thrown when trying to execute and
   // the backend is not available.
   ASSERT_THROWS_WITH_MESSAGE(
-      lm.forward(inputs).toTuple()->elements(), "Backend is not available.");
+      lm.forward(inputs).toTupleRef().elements(), "Backend is not available.");
 }
 
 TEST(BackendTest, TestCompiler) {
