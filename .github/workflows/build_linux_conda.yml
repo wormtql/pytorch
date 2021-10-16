@@ -15,7 +15,7 @@ jobs:
     container:
       image: python:3.9
     steps:
-      - name: Clone pytorch/pytorch
+      - name: Clone wormtql/pytorch
         uses: zhouzhuojie/checkout@05b13c9a0d21f08f6d5e64a1d5042246d13619d9
       - name: Generating build matrix
         id: set-matrix
@@ -25,7 +25,7 @@ jobs:
           echo "${MATRIX}"
           echo "::set-output name=matrix::${MATRIX}"
   build-conda:
-    if: ${{ github.repository_owner == 'pytorch' }}
+    if: ${{ github.repository_owner == 'wormtql' }}
     needs: generate-build-matrix
     runs-on: linux.2xlarge
     strategy:
@@ -56,7 +56,7 @@ jobs:
     steps:
       - name: Clean runner workspace
         run: rm -rf "$GITHUB_WORKSPACE"
-      - name: Clone pytorch/pytorch
+      - name: Clone wormtql/pytorch
         uses: zhouzhuojie/checkout@05b13c9a0d21f08f6d5e64a1d5042246d13619d9
         with:
           path: pytorch
