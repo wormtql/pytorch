@@ -28,7 +28,7 @@ jobs:
     if: ${{ github.repository_owner == 'wormtql' }}
     needs: generate-build-matrix
     # runs-on: linux.2xlarge
-    runs-on: ubuntu-lastest
+    runs-on: ubuntu-latest
     strategy:
       matrix: ${{ fromJson(needs.generate-build-matrix.outputs.matrix) }}
       fail-fast: false
