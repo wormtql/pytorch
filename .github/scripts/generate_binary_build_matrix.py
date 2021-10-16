@@ -15,7 +15,7 @@ import json
 from typing import Dict, List
 
 CUDA_ARCHES = [
-    "10.2",
+    # "10.2",
     "11.1"
 ]
 
@@ -72,10 +72,10 @@ LIBTORCH_CONTAINER_IMAGES = {
 }
 
 FULL_PYTHON_VERSIONS = [
-    "3.6",
-    "3.7",
+    # "3.6",
+    # "3.7",
     "3.8",
-    "3.9",
+    # "3.9",
 ]
 
 
@@ -101,7 +101,8 @@ def generate_conda_matrix(is_pr: bool) -> List[Dict[str, str]]:
         }
         for python_version in snip_if(is_pr, FULL_PYTHON_VERSIONS)
         # We don't currently build conda packages for rocm
-        for arch_version in ["cpu"] + snip_if(is_pr, CUDA_ARCHES)
+        # for arch_version in ["cpu"] + snip_if(is_pr, CUDA_ARCHES)
+        for arch_version in snip_if(is_pr, CUDA_ARCHES)
     ]
 
 

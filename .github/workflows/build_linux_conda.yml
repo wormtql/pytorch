@@ -27,7 +27,8 @@ jobs:
   build-conda:
     if: ${{ github.repository_owner == 'wormtql' }}
     needs: generate-build-matrix
-    runs-on: linux.2xlarge
+    # runs-on: linux.2xlarge
+    runs-on: ubuntu-lastest
     strategy:
       matrix: ${{ fromJson(needs.generate-build-matrix.outputs.matrix) }}
       fail-fast: false
